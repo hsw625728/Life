@@ -13,6 +13,7 @@
 #include <event.h>
 
 #include "table_header.h"
+#include "protocol.h"
 #include "proto_info.h"
 #include "log.h"
 #include "init.h"
@@ -38,6 +39,7 @@ struct sock_ev {
 	struct event* read_ev;
 	struct event* write_ev;
 	char* buffer;
+	int sockid;
 };
 
 #endif

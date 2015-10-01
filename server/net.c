@@ -34,6 +34,7 @@ static int processProtocol(int sock, short event, void* arg)
 	ev->write_ev = (struct event*)malloc(sizeof(struct event));
 	sin_size = sizeof(struct sockaddr_in);
 	newfd = accept(sock, (struct sockaddr*)&cli_addr, &sin_size);
+	ev->sockid = newfd;
 	event_set(ev->read_ev, newfd, EV_READ | EV_PERSIST, gmsvproto_sv_callback, ev);
 	event_base_set(base, ev->read_ev);
 	event_add(ev->read_ev, NULL);

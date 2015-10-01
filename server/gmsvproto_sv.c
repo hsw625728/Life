@@ -32,6 +32,7 @@ static double gmsvproto_ClientLogin_recv_counter = 0;
 #define _PUSH_I8(i,outmax) _ofs=vce_binary_push_nb_i8(_work,_ofs,outmax,(VCEI64)i);_OFSCHECK;
 
 #define MEM_SIZE 1024
+extern struct event_base* base;
 void release_sock_event(struct sock_ev* ev)
 {
 	event_del(ev->read_ev);
@@ -41,9 +42,18 @@ void release_sock_event(struct sock_ev* ev)
 	free(ev);
 }
 
-void on_write(void)
+void on_write(int sock, short event, void* arg)
 {
-	//sendQuery("select * from accountinfo");
+	int protocolID;
+	struct sock_ev* ev = (struct sock_ev*)arg;
+	memcpy(&protocolID, ev->buffer, sizeof(int));
+	printf("protocolID = %d\n", protocolID);
+	switch (protocolID)
+	{
+		case MSG_CS_LOGIN:
+			processLogin(ev);
+		break;
+	}
 	readUsrAndPwd();
 }
 
@@ -63,11 +73,24 @@ void gmsvproto_sv_callback(int sock, short event, void* arg)
 		return;
 	}
 
-	readUsrAndPwd();
-	//获取协议号
-	//根据协议号获取处理函数指针
-	//下面函数调用
-	//event_set(ev->write_ev, sock, EV_WRITE, on_write, ev->buffer);
-	//event_base_set(base, ev->write_ev);
-	//event_add(ev->write_ev, NULL);
+
+//	readUsrAndPwd();
+	event_set(ev->write_ev, sock, EV_WRITE, on_write, ev);
+	event_base_set(base, ev->write_ev);
+	event_add(ev->write_ev, NULL);
+}
+
+void processLogin(struct sock_ev* ev)
+{
+	char uniqueID[64];
+	memset(uniqueID, 0, 64);
+	memcpy(uniqueID, ev->buffer + 4, 32);
+	uniqueID[32] = '\0';
+	printf("buff=");
+	printf(uniqueID);
+	int ret = send(ev->sockid, uniqueID, strlen(uniqueID), 0);
+	if (ret < 0)
+	{
+		printf("send err!n");
+	}
 }
