@@ -1,5 +1,5 @@
-gmsv : main.o init.o log.o resource.o dbsv_proto.o db.o dbsvproto_cli.o util.o net.o account.o gmsv_proto.o gmsvproto_sv.o account_cli.o account_dbsv.o
-	gcc -o gmsv -g  main.o init.o log.o resource.o dbsv_proto.o db.o dbsvproto_cli.o util.o gmsv_proto.o gmsvproto_sv.o account.o account_cli.o account_dbsv.o -L/usr/lib64/mysql -lmysqlclient net.o -levent
+gmsv : main.o init.o log.o resource.o dbsv_proto.o db.o dbsvproto_cli.o util.o net.o account.o gmsv_proto.o gmsvproto_sv.o account_cli.o account_dbsv.o net_packet.o
+	gcc -o gmsv -g  main.o init.o log.o resource.o dbsv_proto.o db.o dbsvproto_cli.o util.o gmsv_proto.o gmsvproto_sv.o account.o account_cli.o account_dbsv.o -L/usr/lib64/mysql -lmysqlclient net.o -levent net_packet.o
 main.o : main.c system.h type.h
 	gcc -c main.c -g
 db.o : db.c system.h type.h /usr/include/mysql/mysql.h
@@ -28,5 +28,7 @@ account_cli.o : ./account/account_cli.c ./account/account.h system.h
 	gcc -c ./account/account_cli.c ./account/account.h system.h -g
 account_dbsv.o : ./account/account_dbsv.c ./account/account.h system.h
 	gcc -c ./account/account_dbsv.c ./account/account.h system.h -g
+net_packet.o : net_packet.c
+	gcc -c net_packet.c net_packet.h -g
 clean :
-	rm gmsv main.o init.o log.o resource.o net.o dbsv_proto.o dbsvproto_cli.o util.o gmsv_proto.o gmsvproto_sv.o account.o *.gch account_cli.o account.o account_dbsv.o db.o
+	rm gmsv main.o init.o log.o resource.o net.o dbsv_proto.o dbsvproto_cli.o util.o gmsv_proto.o gmsvproto_sv.o account.o *.gch account_cli.o account.o account_dbsv.o db.o net_packet.o
