@@ -1,0 +1,1 @@
+INSERT INTO account_info VALUES('260364ad96a4618f14199aad78710295','','',NOW());
