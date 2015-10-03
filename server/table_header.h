@@ -1,9 +1,49 @@
 #ifndef __TABLE_HEADER_H__
 #define __TABLE_HEADER_H__
 
+//accountinfo
 enum{
 	eUSER_NAME,
 	ePASS_WORD,
+};
+
+//account_info
+enum{
+	eACCOUNT_INFO_ID,
+	eACCOUNT_INFO_USR,
+	eACCOUNT_INFO_PWD,
+	eACCOUNT_INFO_BIRTHDAY,
+};
+
+//player_info
+enum{
+	ePLAYER_INFO_ID,
+	ePLAYER_INFO_NICKNAME,
+	ePLAYER_INFO_MONEY,
+	ePLAYER_INFO_IDLE_TIME,
+	ePLAYER_INFO_WORK_TIME,
+	ePLAYER_INFO_SLEEP_TIME,
+	ePLAYER_INFO_SKILL_INDEX,
+};
+
+//player_character
+enum{
+	ePLAYER_CHARACTER_ID,
+	ePLAYER_CHARACTER_TYPE,
+};
+
+//action_list
+enum{
+	eACTION_LIST_AID,
+	eACTION_LIST_NAME,
+	eACTION_LIST_ACT_DESC,
+};
+
+//schedule_daily
+enum{
+	eSCHEDULE_DAILY_ID,
+	eSCHEDULE_DAILY_AID,
+	eSCHEDULE_DAILY_TIME,
 };
 
 #endif

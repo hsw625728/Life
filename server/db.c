@@ -4,6 +4,9 @@
 MYSQL mysql;
 MYSQL* gpMysql;
 
+extern AllPlayer* allPlayer;
+extern int allPlayerNum;
+
 BOOL initDB(void)
 {
 	char string[256];
@@ -142,6 +145,43 @@ int readUsrAndPwd(void)
 	return rec;
 }
 
+BOOL readAllPlayer(void)
+{
+	MYSQL_RES* res;
+	MYSQL_ROW row;
+	int i,rec;
+	BOOL cc;
+	char string[256];
+	cc = sendQuery("select * from account_info");
+	if (!cc) return FALSE;
+	res = mysql_store_result(gpMysql);
+	if (!res)
+	{
+		sprintf(string, "Mysql read allplayer error!\n");
+		LogWrite(LT_SYSTEM,string);
+		return FALSE;
+	}	
+	rec = mysql_num_rows(res);
+	allPlayer = (AllPlayer*)malloc(rec * sizeof(AllPlayer));
+	allPlayerNum = rec;
+	for (i = 0; i < rec; ++i)
+	{
+		row = mysql_fetch_row(res);
+		AllPlayer* player = &(allPlayer[i]);
+		strcpy(player->ID, row[eACCOUNT_INFO_ID]);
+		strcpy(player->usr, row[eACCOUNT_INFO_USR]);
+		strcpy(player->pwd, row[eACCOUNT_INFO_PWD]);
+		player->sockid = 0;
+		printf(player->ID);
+		printf("\n");
+		printf(player->usr);
+		printf("\n");
+		printf(player->pwd);
+		printf("\n");
+	}
+	mysql_free_result(res);
+	return TRUE;
+}
 
 
 

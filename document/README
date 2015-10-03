@@ -8,6 +8,9 @@ libevent.org
 #./configure
 #make
 #make install
+#ln -s /usr/local/lib/libevent-2.0.so.5 /usr/lib/libevent-2.0.so.5
+#ldconfig
+
 2.安装mysql开发库和服务器
 # yum install -y mysql-server mysql mysql-devel
 # service mysqld start

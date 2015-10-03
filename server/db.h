@@ -11,7 +11,7 @@ BOOL closeDB(void);
 
 
 int readUsrAndPwd(void);
-
+int readAllPlayer(void);
 
 
 

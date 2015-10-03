@@ -20,6 +20,7 @@
 #include "resource.h"
 #include "net.h"
 #include "db.h"
+#include "all_player.h"
 #include "util.h"
 #include "dbsvproto_cli.h"
 #include "dbsv_proto.h"

@@ -42,6 +42,7 @@ INITFUNC InitBaseSystemFunc[] = {
 	readConfigFile,
 	initNet,
 	initDB,
+	initAllPlayer,
 	NULL
 };
 INITFUNC InitGameSystemFunc[] = {
