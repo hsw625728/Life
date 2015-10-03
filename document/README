@@ -1,0 +1,23 @@
+1.下载编译libevent库
+libevent.org
+找到稳定版本livevent下载地址并用如下命令下载
+#wget https://sourceforge.net/projects/levent/files/libevent/libevent-2.0/libevent-2.0.22-stable.tar.gz
+//解压缩编译安装
+#tar zxvf libevent-2.0.22-stable.tar.gz
+#cd libevent-2.0.22-stable
+#./configure
+#make
+#make install
+2.安装mysql开发库和服务器
+# yum install -y mysql-server mysql mysql-devel
+# service mysqld start
+# chkconfig mysqld on
+# mysqladmin -u root password 'xxxxxx'
+# vi /etc/my.cnf
+//添加如下行
+[client]
+default-character-set=utf8
+[mysql]
+default-character-set=utf8
+[mysqld]
+default-character-set=utf8
