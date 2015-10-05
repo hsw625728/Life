@@ -13,6 +13,6 @@ typedef struct
 
 BOOL initAllPlayer(void);
 void updatePlayerSockid(const char* id, int sockid);
-
+void updateAllPlayer(int signal);
 
 #endif 

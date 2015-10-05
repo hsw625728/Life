@@ -43,6 +43,7 @@ INITFUNC InitBaseSystemFunc[] = {
 	initNet,
 	initDB,
 	initAllPlayer,
+	initGameTimer,
 	NULL
 };
 INITFUNC InitGameSystemFunc[] = {

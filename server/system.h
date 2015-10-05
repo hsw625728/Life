@@ -28,6 +28,7 @@
 #include "gmsvproto_sv.h"
 #include "gmsv_proto.h"
 #include "account/account.h"
+#include "timer_life.h"
 
 enum
 {
