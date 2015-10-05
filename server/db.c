@@ -6,6 +6,7 @@ MYSQL* gpMysql;
 
 extern AllPlayer* allPlayer;
 extern int allPlayerNum;
+extern PlayerSchedule* playerSchedule;
 
 BOOL initDB(void)
 {
@@ -145,7 +146,7 @@ int readUsrAndPwd(void)
 	return rec;
 }
 
-BOOL readAllPlayer(void)
+BOOL db_readAllPlayer(void)
 {
 	MYSQL_RES* res;
 	MYSQL_ROW row;
@@ -163,6 +164,7 @@ BOOL readAllPlayer(void)
 	}	
 	rec = mysql_num_rows(res);
 	allPlayer = (AllPlayer*)malloc(rec * sizeof(AllPlayer));
+	playerSchedule = (PlayerSchedule*)malloc(rec * sizeof(PlayerSchedule));
 	allPlayerNum = rec;
 	for (i = 0; i < rec; ++i)
 	{
@@ -172,6 +174,12 @@ BOOL readAllPlayer(void)
 		strcpy(player->usr, row[eACCOUNT_INFO_USR]);
 		strcpy(player->pwd, row[eACCOUNT_INFO_PWD]);
 		player->sockid = 0;
+
+		PlayerSchedule* ps = &(playerSchedule[i]);
+		strcpy(ps->ID, row[eACCOUNT_INFO_ID]);
+		ps->actid = NULL;
+		ps->act_num = 0;
+
 		printf(player->ID);
 		printf("\n");
 		printf(player->usr);
@@ -183,6 +191,42 @@ BOOL readAllPlayer(void)
 	return TRUE;
 }
 
+int db_readPlayerSchedule(const char* id)
+{
+	MYSQL_RES* res;
+	MYSQL_ROW row;
+	int i, rec;
+	BOOL cc;
+	char string[256];
+	cc = sendQuery("select * from schedule_daily where ID=%s", id);
+	if (!cc) return FALSE;
+	res = mysql_store_result(gpMysql);
+	if (!res)
+	{
+		sprintf(string, "Mysql read allplayer error!\n");
+		LogWrite(LT_SYSTEM,string);
+		return FALSE;
+	}	
+	rec = mysql_num_rows(res);
+	if (rec > 0)
+	{
+		PlayerSchedule* ps = getPlayerScheduleByid(id);
+		ps->act_num = rec;
+		ps->actid = (int*)malloc(rec * sizeof(int));
+		ps->act_time = (char**)malloc(rec * sizeof(char*));
+		for (i = 0; i < rec; i++)
+		{
+			row = mysql_fetch_row(res);
+			ps->actid[i] = atoi(row[eSCHEDULE_DAILY_AID]);
+			ps->act_time[i] = (char*)malloc(64 * sizeof(char));
+			strcpy(ps->act_time[i], row[eSCHEDULE_DAILY_TIME]);
+			printf("ps->actid[%d]=%d\n", i, ps->actid[i]);
+			printf("ps->act_time[%d]=%s\n", i, ps->act_time[i]);
+		}
+	}
+	mysql_free_result(res);
+	return rec;
+}
 
 
 

@@ -11,8 +11,19 @@ typedef struct
 	int sockid;
 }AllPlayer;
 
+typedef struct
+{
+	char ID[33];
+	int act_num;
+	int* actid;
+	char** act_time;
+}PlayerSchedule;
+
 BOOL initAllPlayer(void);
 void updatePlayerSockid(const char* id, int sockid);
+void updatePlayerSchedule(const char* id);
 void updateAllPlayer(int signal);
+PlayerSchedule* getPlayerScheduleByid(const char* id);
+void getCurrentActionAndElapse(PlayerSchedule* ps, int* act, unsigned int* elapse);
 
 #endif 

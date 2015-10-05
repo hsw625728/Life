@@ -60,6 +60,7 @@ void processLogin(struct sock_ev* ev)
 	printf("buff=");
 	printf(usr);
 	updatePlayerSockid(usr, ev->sockid);
+	updatePlayerSchedule("9c927504a1147d0e4269fcbddede9438");
 	int ret = send(ev->sockid, usr, strlen(usr), 0);
 	if (ret < 0)
 	{

@@ -11,7 +11,8 @@ BOOL closeDB(void);
 
 
 int readUsrAndPwd(void);
-int readAllPlayer(void);
+int db_readAllPlayer(void);
+int db_readPlayerSchedule(const char* id);
 
 
 

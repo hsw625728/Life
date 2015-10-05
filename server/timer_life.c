@@ -10,8 +10,8 @@ BOOL initGameTimer(void)
 	new_value.it_interval.tv_sec = 5;
 	new_value.it_interval.tv_usec = 0;
 
+	//all_player.c updateAllPlayer()
 	signal(SIGALRM, updateAllPlayer);
 	setitimer(ITIMER_REAL, &new_value, &old_value);
-	printf("initGameTimer\n");
 	return TRUE;
 }
