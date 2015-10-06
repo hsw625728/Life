@@ -25,5 +25,6 @@ void updatePlayerSchedule(const char* id);
 void updateAllPlayer(int signal);
 PlayerSchedule* getPlayerScheduleByid(const char* id);
 void getCurrentActionAndElapse(PlayerSchedule* ps, int* act, unsigned int* elapse);
+void createNewDayScheduleForAllPlayer(void);
 
 #endif 
