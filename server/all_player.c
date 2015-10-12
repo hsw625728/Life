@@ -16,7 +16,7 @@ void updatePlayerSockid(const char* id, int sockid)
 	int i = 0;
 	for (; i < allPlayerNum; i++)
 	{
-		if (!strcmp(allPlayer[i].usr, id))
+		if (!strcmp(allPlayer[i].ID, id))
 		{
 			allPlayer[i].sockid = sockid;
 			printf("UpdatePlayerSockid(%s)=%d\n", id, sockid);

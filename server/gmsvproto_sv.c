@@ -5,28 +5,38 @@
 extern struct event_base* base;
 extern AllPlayer* allPlayer;
 
+void processLogin(struct sock_ev* ev);
+
 void release_sock_event(struct sock_ev* ev)
 {
 	event_del(ev->read_ev);
 	free(ev->read_ev);
 	free(ev->write_ev);
-	free(ev->buffer);
+	NET_PACKET_END(ev->packet);
+	ev->packet = 0;
 	free(ev);
 }
 
 void on_write(int sock, short event, void* arg)
 {
-	int protocolID;
+	if (arg == 0)
+		return;
 	struct sock_ev* ev = (struct sock_ev*)arg;
-	memcpy(&protocolID, ev->buffer, sizeof(int));
-	printf("protocolID = %d\n", protocolID);
-	switch (protocolID)
+	if (ev->packet == 0)
+		return;
+	netpackGetOpcode(ev->packet, &(ev->packet->opcode));
+	printf("protocolID = %d\n", ev->packet->opcode);
+	switch (ev->packet->opcode)
 	{
 		case MSG_CS_LOGIN:
 			processLogin(ev);
 		break;
 	}
-	readUsrAndPwd();
+	//释放通信NetPacket以及内部buffer空间
+	//这部分空间在如下函数中申请
+	//函数gmsvproto_sv.c:gmsvproto_sv_callback()
+	NET_PACKET_END(ev->packet);
+	ev->packet = 0;
 }
 
 void gmsvproto_sv_callback(int sock, short event, void* arg)
@@ -34,10 +44,17 @@ void gmsvproto_sv_callback(int sock, short event, void* arg)
 	struct event* write_ev;
 	int size;
 	struct sock_ev* ev = (struct sock_ev*)arg;
-	ev->buffer = (char*)malloc(MEM_SIZE);
-	bzero(ev->buffer, MEM_SIZE);
-	size = recv(sock, ev->buffer, MEM_SIZE, 0);
-	printf("sock = %d, receive data:%s, size:%d\n",sock, ev->buffer, size);
+	//初始化通信NetPacket以及内部buffer
+	//这部分内容在如下函数中释放
+	//函数gmsvproto_sv.c:on_write()最后部分
+	ev->packet = (struct NetPacket*)malloc(sizeof(struct NetPacket));
+	ev->packet->m_buffer = (unsigned char*)malloc(DEFAULT_SIZE);
+	bzero(ev->packet->m_buffer, DEFAULT_SIZE);
+	//接受服务器数据
+	size = recv(sock, ev->packet->m_buffer, DEFAULT_SIZE, 0);
+	printf("sock = %d, receive data:%s, size:%d\n",sock, ev->packet->m_buffer, size);
+	//获取数据包的长度
+	memcpy(&(ev->packet->m_writePos), ev->packet->m_buffer + sizeof(uint16_t), sizeof(uint16_t));
 	if (size == 0) {
 		release_sock_event(ev);
 		close(sock);
@@ -56,12 +73,18 @@ void processLogin(struct sock_ev* ev)
 {
 	char usr[64];
 	memset(usr, 0, 64);
-	memcpy(usr, ev->buffer + 4, 32);
+	NET_PACKET_POP_STRING(ev->packet, usr, 64);
 	printf("buff=");
 	printf(usr);
 	updatePlayerSockid(usr, ev->sockid);
-	updatePlayerSchedule("9c927504a1147d0e4269fcbddede9438");
-	int ret = send(ev->sockid, usr, strlen(usr), 0);
+	updatePlayerSchedule(usr);
+	//int ret = send(ev->sockid, usr, strlen(usr), 0);
+	NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
+	NET_PACKET_PUSH_UINT16(packet, MSG_SC_LOGIN_RES);
+	NET_PACKET_PUSH_UINT16(packet, 40);
+	NET_PACKET_PUSH_STRING(packet, "Login success!");
+	int ret = send(ev->sockid, packet->m_buffer, packet->m_writePos, 0);
+	NET_PACKET_END(packet);
 	if (ret < 0)
 	{
 		printf("send err!n");

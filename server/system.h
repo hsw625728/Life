@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <event.h>
 
+#include "net_packet.h"
 #include "table_header.h"
 #include "protocol.h"
 #include "proto_info.h"
@@ -37,12 +38,4 @@ enum
 	eCTYPE_STRING
 }CTYPE;
 
-struct sock_ev {
-	struct event* read_ev;
-	struct event* write_ev;
-	char* buffer;
-	int sockid;
-};
-
 #endif
-

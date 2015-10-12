@@ -1,5 +1,6 @@
 #include "system.h"
 
+
 NetStruct ConnectList[NT_NUM];
 sNetConnList dbConnList;
 struct event_base* base;
@@ -25,23 +26,23 @@ BOOL initNet(void)
 	return TRUE;
 }
 
-static int processProtocol(int sock, short event, void* arg)
+void processProtocol(int sock, short event, void* arg)
 {
 	struct sockaddr_in cli_addr;
 	int newfd, sin_size;
 	struct sock_ev* ev = (struct sock_ev*)malloc(sizeof(struct sock_ev));
 	ev->read_ev = (struct event*)malloc(sizeof(struct event));
 	ev->write_ev = (struct event*)malloc(sizeof(struct event));
+	ev->packet = 0;
 	sin_size = sizeof(struct sockaddr_in);
 	newfd = accept(sock, (struct sockaddr*)&cli_addr, &sin_size);
 	ev->sockid = newfd;
 	event_set(ev->read_ev, newfd, EV_READ | EV_PERSIST, gmsvproto_sv_callback, ev);
 	event_base_set(base, ev->read_ev);
 	event_add(ev->read_ev, NULL);
-	return 1;
 }
 
-static int processDBProtocol(int _c, char *_data, int _len)
+void processDBProtocol(int _c, char *_data, int _len)
 {
 	int protocolID;
 	if (dbsvproto_cli_pcallback(_c, _data, _len) < 0)
@@ -49,9 +50,9 @@ static int processDBProtocol(int _c, char *_data, int _len)
 		char string[256];
 		//protocolID = GET_16BIT_INT(_data);
 		sprintf(string, "[[PROTOCOL]]dbsvproto_cli_callback called failed.protocolID = %d\n", protocolID);
-		return -1;
+		return ;
 	}
-	return 1;
+	return ;
 }
 
 BOOL initClient(void)
