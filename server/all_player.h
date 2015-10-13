@@ -21,6 +21,7 @@ typedef struct
 
 BOOL initAllPlayer(void);
 void updatePlayerSockid(const char* id, int sockid);
+void closePlayerSocketBySockid(int sockid);
 void updatePlayerSchedule(const char* id);
 void updateAllPlayer(int signal);
 PlayerSchedule* getPlayerScheduleByid(const char* id);

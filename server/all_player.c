@@ -37,6 +37,18 @@ void updatePlayerSockid(const char* id, int sockid)
 		}
 	}
 }
+void closePlayerSocketBySockid(int sockid)
+{
+	int i = 0;
+	for (; i < allPlayerNum; i++)
+	{
+		if (allPlayer[i].sockid == sockid)
+		{
+			allPlayer[i].sockid = 0;
+			return;
+		}
+	}
+}
 void updatePlayerSchedule(const char* id)
 {
 	db_readPlayerSchedule(id);

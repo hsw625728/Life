@@ -31,11 +31,37 @@ void processProtocol(int sock, short event, void* arg)
 	struct sockaddr_in cli_addr;
 	int newfd, sin_size;
 	struct sock_ev* ev = (struct sock_ev*)malloc(sizeof(struct sock_ev));
+	if (NULL == ev)
+	{
+		char string[256];
+		sprintf(string, "[ERROR]Net.c:processProtocol() malloc sock_ev failed!\n");
+		LogWrite(LT_SYSTEM, string);
+		printf(string);
+	}
 	ev->read_ev = (struct event*)malloc(sizeof(struct event));
 	ev->write_ev = (struct event*)malloc(sizeof(struct event));
+	if (NULL == ev->read_ev || NULL == ev->write_ev)
+	{
+		char string[256];
+		
+		sprintf(string, "[ERROR]Net.c:processProtocol() malloc read_ev or write_ev failed!\n");
+		LogWrite(LT_SYSTEM, string);
+		printf(string);
+	}
 	ev->packet = 0;
 	sin_size = sizeof(struct sockaddr_in);
 	newfd = accept(sock, (struct sockaddr*)&cli_addr, &sin_size);
+	if (-1 == newfd)
+	{
+		char string[1024];
+		extern int errno;
+		char* err = strerror(errno);
+		sprintf(string, "[ERROR]Net.c:processProtocol() accept failed!\n");
+		LogWrite(LT_SYSTEM, string);
+		LogWrite(LT_SYSTEM, err);
+		printf(string);
+		printf(err);
+	}
 	ev->sockid = newfd;
 	event_set(ev->read_ev, newfd, EV_READ | EV_PERSIST, gmsvproto_sv_callback, ev);
 	event_base_set(base, ev->read_ev);

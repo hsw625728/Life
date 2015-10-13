@@ -48,10 +48,40 @@ void gmsvproto_sv_callback(int sock, short event, void* arg)
 	//这部分内容在如下函数中释放
 	//函数gmsvproto_sv.c:on_write()最后部分
 	ev->packet = (struct NetPacket*)malloc(sizeof(struct NetPacket));
+	if (ev->packet == NULL)
+	{
+		char  string[256];
+		sprintf(string, "[ERROR]gmsvproto_sv.c:gmsvproto_sv_callback() malloc ev->packet failed!\n");
+		LogWrite(LT_SYSTEM, string);
+		printf(string);
+	}
 	ev->packet->m_buffer = (unsigned char*)malloc(DEFAULT_SIZE);
+	if (ev->packet->m_buffer == NULL)
+	{
+		char string[256];
+		sprintf(string, "[ERROR]gmsvproto_sv.c:gmsvproto_sv_callback() malloc ev->packet->m_buffer failed!\n");
+		LogWrite(LT_SYSTEM, string);
+		printf(string);
+	}
 	bzero(ev->packet->m_buffer, DEFAULT_SIZE);
 	//接受服务器数据
 	size = recv(sock, ev->packet->m_buffer, DEFAULT_SIZE, 0);
+	if (size == -1)
+	{
+		if (errno == 104)
+		{
+			//暂时忽略104 Connection reset by peer
+			//因为目前客户端断开连接会收到这个消息
+			//不处理会导致服务器崩溃
+			return;
+		}
+	}
+	if (size == 0)
+	{
+		//客户端断开连接
+		//这里需要处理断开连接的处理
+		closePlayerSocketBySockid(sock);
+	}
 	printf("sock = %d, receive data:%s, size:%d\n",sock, ev->packet->m_buffer, size);
 	//获取数据包的长度
 	memcpy(&(ev->packet->m_writePos), ev->packet->m_buffer + sizeof(uint16_t), sizeof(uint16_t));
@@ -63,7 +93,6 @@ void gmsvproto_sv_callback(int sock, short event, void* arg)
 	}
 
 
-//	readUsrAndPwd();
 	event_set(ev->write_ev, sock, EV_WRITE, on_write, ev);
 	event_base_set(base, ev->write_ev);
 	event_add(ev->write_ev, NULL);
