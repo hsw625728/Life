@@ -30,7 +30,10 @@ void on_write(int sock, short event, void* arg)
 	{
 		case MSG_CS_LOGIN:
 			processLogin(ev);
-		break;
+			break;
+		case MSG_CS_GET_SCHEDULE:
+			processGetSchedule(ev);
+			break;
 	}
 	//释放通信NetPacket以及内部buffer空间
 	//这部分空间在如下函数中申请
@@ -55,6 +58,7 @@ void gmsvproto_sv_callback(int sock, short event, void* arg)
 		LogWrite(LT_SYSTEM, string);
 		printf(string);
 	}
+
 	ev->packet->m_buffer = (unsigned char*)malloc(DEFAULT_SIZE);
 	if (ev->packet->m_buffer == NULL)
 	{
@@ -64,6 +68,11 @@ void gmsvproto_sv_callback(int sock, short event, void* arg)
 		printf(string);
 	}
 	bzero(ev->packet->m_buffer, DEFAULT_SIZE);
+	ev->packet->opcode = 0;
+	ev->packet->m_readPos = 0;
+	ev->packet->m_writePos = 0;
+	ev->packet->m_buffersize = DEFAULT_SIZE;
+
 	//接受服务器数据
 	size = recv(sock, ev->packet->m_buffer, DEFAULT_SIZE, 0);
 	if (size == -1)
@@ -108,14 +117,72 @@ void processLogin(struct sock_ev* ev)
 	updatePlayerSockid(usr, ev->sockid);
 	updatePlayerSchedule(usr);
 	//int ret = send(ev->sockid, usr, strlen(usr), 0);
+	AllPlayer* player = getPlayerByID(usr);
+	if (player != 0)
+	{
+		NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
+		NET_PACKET_PUSH_UINT16(packet, MSG_SC_LOGIN_RES);
+		NET_PACKET_PUSH_UINT16(packet, 0);
+		NET_PACKET_PUSH_UINT16(packet, 0);
+		NET_PACKET_PUSH_STRING(packet, "Login success!");
+		NET_PACKET_PUSH_STRING(packet, player->usr);
+		NET_PACKET_PUSH_STRING(packet, player->nickname);
+		NET_PACKET_PUSH_STRING(packet, player->birthday);
+		NET_PACKET_UPDATE_LENGTH(packet);
+		int ret = send(ev->sockid, packet->m_buffer, packet->m_writePos, 0);
+		NET_PACKET_END(packet);
+		if (ret < 0)
+		{
+			printf("[WorldPacket]Error: gmsvproto_sv.c:processLogin()send err!\n");
+		}
+	}
+	else
+	{
+		//错误处理  没有此ID的角色
+		NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
+		NET_PACKET_PUSH_UINT16(packet, MSG_SC_LOGIN_RES);
+		NET_PACKET_PUSH_UINT16(packet, 0);
+		NET_PACKET_PUSH_UINT16(packet, 1);
+		NET_PACKET_PUSH_STRING(packet, "Login failed!");
+		NET_PACKET_UPDATE_LENGTH(packet);
+		int ret = send(ev->sockid, packet->m_buffer, packet->m_writePos, 0);
+		NET_PACKET_END(packet);
+		if (ret < 0)
+		{
+			printf("[WorldPacket]Error: gmsvproto_sv.c:processLogin()send err!\n");
+		}
+	}
+	//测试代码
+	db_updatePlayerHistory(usr);
+}
+
+void processGetSchedule(struct sock_ev* ev)
+{
+	char usr[64];
+	memset(usr, 0, 64);
+	NET_PACKET_POP_STRING(ev->packet, usr, 64);
+	PlayerSchedule* sc = getPlayerScheduleByid(usr);
+	if (sc == NULL)
+	{
+		char string[256];
+		sprintf(string, "[ERROR]gmsvproto_sv.c:processGetSchedule().usr=(%s)\n", usr);
+		LogWrite(LT_SYSTEM, string);
+	}
 	NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
-	NET_PACKET_PUSH_UINT16(packet, MSG_SC_LOGIN_RES);
-	NET_PACKET_PUSH_UINT16(packet, 40);
-	NET_PACKET_PUSH_STRING(packet, "Login success!");
+	NET_PACKET_PUSH_UINT16(packet, MSG_SC_GET_SCHEDULE_RES);
+	NET_PACKET_PUSH_UINT16(packet, 0);
+	NET_PACKET_PUSH_UINT32(packet, sc->act_num);
+	int i ;
+	for (i = 0; i < sc->act_num; i++)
+	{
+		NET_PACKET_PUSH_UINT32(packet, sc->actid[i]);
+		NET_PACKET_PUSH_STRING(packet, sc->act_time[i]);
+	}
+	NET_PACKET_UPDATE_LENGTH(packet);
 	int ret = send(ev->sockid, packet->m_buffer, packet->m_writePos, 0);
 	NET_PACKET_END(packet);
 	if (ret < 0)
 	{
-		printf("send err!n");
+		printf("gmsvproto_sv.c:processGetSchedule()  send err!\n");
 	}
 }

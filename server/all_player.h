@@ -7,6 +7,8 @@ typedef struct
 {
 	char ID[33];
 	char usr[64];
+	char nickname[32];
+	char birthday[64];
 	char pwd[64];
 	int sockid;
 }AllPlayer;
@@ -19,6 +21,7 @@ typedef struct
 	char** act_time;
 }PlayerSchedule;
 
+
 BOOL initAllPlayer(void);
 void updatePlayerSockid(const char* id, int sockid);
 void closePlayerSocketBySockid(int sockid);
@@ -27,5 +30,8 @@ void updateAllPlayer(int signal);
 PlayerSchedule* getPlayerScheduleByid(const char* id);
 void getCurrentActionAndElapse(PlayerSchedule* ps, int* act, unsigned int* elapse);
 void createNewDayScheduleForAllPlayer(void);
+AllPlayer* getPlayerByID(const char* id);
+unsigned int calElapseFromTwoDatetimeString(const char* t1, const char* t2);
+unsigned int calElapseFromTwoTimeString(const char* t1, const char* t2);
 
 #endif 

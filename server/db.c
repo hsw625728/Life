@@ -1,8 +1,16 @@
 #include "system.h"
 #include <mysql/mysql.h>
+#include "all_player.h"
 
 MYSQL mysql;
 MYSQL* gpMysql;
+typedef struct
+{
+	char ID[33];
+	int aID;
+	float total_time;
+	char update_time[64];
+}PlayerHistory;
 
 extern AllPlayer* allPlayer;
 extern int allPlayerNum;
@@ -172,6 +180,8 @@ BOOL db_readAllPlayer(void)
 		AllPlayer* player = &(allPlayer[i]);
 		strcpy(player->ID, row[eACCOUNT_INFO_ID]);
 		strcpy(player->usr, row[eACCOUNT_INFO_USR]);
+		strcpy(player->nickname, row[eACCOUNT_INFO_NICKNAME]);
+		strcpy(player->birthday, row[eACCOUNT_INFO_BIRTHDAY]);
 		strcpy(player->pwd, row[eACCOUNT_INFO_PWD]);
 		player->sockid = 0;
 
@@ -183,6 +193,10 @@ BOOL db_readAllPlayer(void)
 		printf(player->ID);
 		printf("\n");
 		printf(player->usr);
+		printf("\n");
+		printf(player->nickname);
+		printf("\n");
+		printf(player->birthday);
 		printf("\n");
 		printf(player->pwd);
 		printf("\n");
@@ -230,6 +244,266 @@ int db_readPlayerSchedule(const char* id)
 
 
 
+int db_updatePlayerHistory(const char* id)
+{
+	time_t updateTime;
+	struct tm updateTimeTM;
+	char updateTimeStr[64];
+	char updateTimeStr_T[64];
+	time_t now;
+	struct tm* now_tm;
+	char now_str[64];
+	char now_str_T[64];
+	PlayerHistory* phistory = 0;
+	int history_num = 0;
+	PlayerHistory* update_his = 0;
+	int update_his_num = 0;
+	PlayerSchedule* schedule = 0;
+
+	time(&now);
+	now_tm = localtime(&now);
+	strftime(now_str, sizeof(now_str), "%Y-%m-%d %H:%M:%S", now_tm);
+	strftime(now_str_T, sizeof(now_str_T), "%H:%M:%S", now_tm);
+
+
+	MYSQL_RES* res;
+	MYSQL_ROW row;
+	int i, rec;
+	BOOL cc;
+	char string[256];
+
+	//第一步：从数据库中把指定id的角色历史时间读取到内存中
+	cc = sendQuery("SELECT * FROM player_history WHERE player_history.ID=%s", id);
+	if (!cc) return FALSE;
+	res =mysql_store_result(gpMysql);
+	if (!res)
+	{
+		sprintf(string, "[SQL_ERROR]db.c:db_updatePlayerHistory() sql err!\n");
+		LogWrite(LT_SYSTEM, string);
+		return FALSE;
+	}
+	rec = mysql_num_rows(res);
+	if (rec > 0)
+	{
+		phistory = (PlayerHistory*)malloc(sizeof(PlayerHistory) * rec);
+		history_num = rec;
+		for (i = 0; i < rec; i++)
+		{
+			row = mysql_fetch_row(res);
+			strcpy(phistory[i].ID, row[ePLAYER_HISTORY_ID]);
+			phistory[i].aID = atoi(row[ePLAYER_HISTORY_AID]);
+			phistory[i].total_time = atof(row[ePLAYER_HISTORY_TOTAL_TIME]);
+			strcpy(phistory[i].update_time, row[ePLAYER_HISTORY_UPDATE_TIME]);
+		}
+		memset(updateTimeStr, 0, 64);
+		strcpy(updateTimeStr, row[ePLAYER_HISTORY_UPDATE_TIME]); 
+	}
+	else
+	{
+		AllPlayer* player = getPlayerByID(id);
+		if (player == 0)
+		{
+			sprintf(string, "[Player]db.c:db_updatePlayerHistory().get playerid=(%s)failed!\n", id);
+			LogWrite(LT_SYSTEM, string);
+			return -1;
+		}
+		strcpy(updateTimeStr, player->birthday);
+	}
+	
+	strptime(updateTimeStr, "%Y-%m-%d %H:%M:%S", &updateTimeTM);
+	updateTime = mktime(&updateTimeTM);
+	strftime(updateTimeStr_T, sizeof(updateTimeStr_T), "%H:%M:%S", &updateTimeTM);
+
+	mysql_free_result(res);
+
+	//第二步：计算并更新内存数据中角色的最新历史时间
+	int elapse = now - updateTime;
+	int day = elapse/(60*60*24);
+	int min = elapse%(60*60*24);
+	schedule = getPlayerScheduleByid(id);
+	if (schedule != 0)
+	{
+		update_his_num = schedule->act_num + history_num;
+		update_his = (PlayerHistory*)malloc(sizeof(PlayerHistory)*update_his_num);
+		memset(update_his, 0, sizeof(PlayerHistory)*update_his_num);
+		memcpy(update_his, phistory, sizeof(PlayerHistory)*history_num);
+		//累计整天的部分
+		if (day > 0)
+		{
+			for (i = 0; i < schedule->act_num; i++)
+			{
+				float ti = 0.0f;
+				if (i < schedule->act_num - 1)
+					ti = calElapseFromTwoTimeString(schedule->act_time[i], schedule->act_time[i+1]);
+				else
+				{
+					float temp1 = 0.0f;
+					float temp2 = 0.0f;
+					temp1 = calElapseFromTwoTimeString(schedule->act_time[i], "23:59:59");
+					temp2 = calElapseFromTwoTimeString("00:00:00", schedule->act_time[0]);
+					ti = temp1 + temp2;
+				}
+
+				int j;
+				for (j = 0; j < history_num; j++)
+				{
+					//历史记录已经存在。直接累积时间。
+					if (schedule->actid[i] == update_his[j].aID)
+					{
+						update_his[j].total_time += (ti*day);
+						strcpy(update_his[j].update_time, now_str);
+						break;
+					}
+				}
+				if (j == history_num)
+				{
+					//历史记录中不存在，添加到历史记录中。
+					strcpy(update_his[history_num].ID, id);
+					update_his[history_num].aID = schedule->actid[i];
+					update_his[history_num].total_time += (ti*day);
+					strcpy(update_his[history_num].update_time, now_str);
+
+					history_num++;
+				}
+			}	
+		}
+		//累计不足整天的部分
+		int haf = strcmp(updateTimeStr_T, now_str_T);
+		//if (haf >= 0)
+		if (haf < 0)
+		{
+			float up_i = 0.0f;
+			int aID = 0;
+			//不足一天计算两端
+			for (i = 0; i < schedule->act_num; i++)
+			{
+				int big = strcmp(now_str_T, schedule->act_time[i]);
+				int small = strcmp(schedule->act_time[i], updateTimeStr_T);
+				if (big >=0)
+				{
+					float ti = 0.0f;
+					if (i < schedule->act_num - 1)
+					{
+						if (strcmp(now_str_T, schedule->act_time[i+1]) > 0)
+						{
+							ti = calElapseFromTwoTimeString(schedule->act_time[i], schedule->act_time[i+1]);
+						}
+						else
+						{
+							ti = calElapseFromTwoTimeString(schedule->act_time[i], now_str_T);
+						}
+					}
+					else
+					{
+						ti = calElapseFromTwoTimeString(schedule->act_time[i], now_str_T);
+					}
+					int j;
+					for (j = 0; j < history_num; j++)
+					{
+						if (schedule->actid[i] == update_his[j].aID)
+						{
+							update_his[j].total_time += ti;	
+							strcpy(update_his[j].update_time, now_str_T);
+							break;
+						}
+					}
+				}
+				else if (small >= 0)
+				{
+					float ti = 0.0f;
+					if (i > 0)
+					{
+						if (strcmp(schedule->act_time[i], updateTimeStr_T)>0&&strcmp(schedule->act_time[i-1], updateTimeStr_T)<0)
+						{
+							up_i = calElapseFromTwoTimeString(updateTimeStr_T, schedule->act_time[i]);
+							aID = schedule->actid[i-1];
+						}
+					}
+					else
+					{
+						
+						up_i = calElapseFromTwoTimeString(updateTimeStr_T, schedule->act_time[i]);
+						aID = schedule->actid[history_num - 1];
+					}
+					
+					if (i < schedule->act_num - 1)
+					{
+						ti = calElapseFromTwoTimeString(updateTimeStr_T, schedule->act_time[i+1]);
+					}
+					else
+					{
+						ti = calElapseFromTwoTimeString(schedule->act_time[i], "23:59:59");
+					}
+					int j;
+					for (j = 0; j < history_num; j++)
+					{
+						if (schedule->actid[i] == update_his[j].aID)
+						{
+							update_his[j].total_time += ti;
+							strcpy(update_his[j].update_time, now_str_T);
+							break;
+						}
+					}
+				}
+			}
+
+			//计算update下面一段和now_str上面一段
+			int j;
+			for (j = 0; j < history_num; j++)
+			{
+				if (aID == update_his[j].aID)
+				{
+					update_his[j].total_time += up_i;
+					strcpy(update_his[j].update_time, now_str_T);
+					break;
+				}
+			}
+			float down_now = 0.0f;
+			
+			if (strcmp(schedule->act_time[0], now_str_T)>0)
+			{
+				down_now = calElapseFromTwoTimeString("00:00:00", now_str_T);
+				aID = schedule->act_time[history_num - 1];
+			}
+			else
+			{
+				down_now = calElapseFromTwoTimeString("00:00:00", schedule->act_time[0]);
+				aID = schedule->act_time[history_num - 1];
+			}
+			for (j = 0; j < history_num; j++)
+			{
+				if (aID == update_his[j].aID)
+				{
+					update_his[j].total_time += down_now;
+					strcpy(update_his[j].update_time, now_str_T);
+					break;
+				}
+			}
+		}
+		else
+		{
+			//超过一天计算中间
+		}
+	}
+
+	//第三步：将内存中的数据更新写入数据库
+	for (i = 0; i < history_num; i++)
+	{
+		char string[1024];
+		memset(string, 0, 1024);
+		sprintf(string , "REPLACE INTO player_history VALUES('%s',%d,%f,'%s')", update_his[i].ID, update_his[i].aID, update_his[i].total_time, update_his[i].update_time);
+		sendQuery(string);
+		printf(string);
+		printf("\n");
+	}
+
+
+	//第四步：释放临时申请内存空间
+	if (phistory != 0)
+		free(phistory);
+	if (update_his != 0)
+		free(update_his);
+}
 
 
 

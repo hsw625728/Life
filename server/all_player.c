@@ -37,6 +37,19 @@ void updatePlayerSockid(const char* id, int sockid)
 		}
 	}
 }
+
+AllPlayer* getPlayerByID(const char* id)
+{
+	int i = 0;
+	for (; i < allPlayerNum; i++)
+	{
+		if (!strcmp(allPlayer[i].ID, id))
+		{		
+			return &(allPlayer[i]);
+		}
+	}
+	return 0;
+}
 void closePlayerSocketBySockid(int sockid)
 {
 	int i = 0;
@@ -72,10 +85,20 @@ void updateAllPlayer(int signo)
 				unsigned int elapse;
 				PlayerSchedule* ps = getPlayerScheduleByid(allPlayer[i].ID);
 				getCurrentActionAndElapse(ps, &act, &elapse);
+				NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
+				NET_PACKET_PUSH_UINT16(packet, MSG_SC_UPDATE_PLAYER_STATE);
+				NET_PACKET_PUSH_UINT16(packet, 0);
+
 				//这里给在线的角色发送数据
 				char string[256];
-				sprintf(string, "当前事件ID（%d）持续时间（%d）\n", act, elapse);
-				send(allPlayer[i].sockid, string, strlen(string), 0);
+				memset(string, 0, 256);
+				sprintf(string, "事件ID:%d  时间:%d分\n", act, elapse);
+				printf("%s:%d:%d\n", allPlayer[i].ID, act, elapse);
+				NET_PACKET_PUSH_STRING(packet, string);
+				
+				NET_PACKET_UPDATE_LENGTH(packet);
+				int ret = send(allPlayer[i].sockid, packet->m_buffer, packet->m_writePos, 0);
+				NET_PACKET_END(packet);
 			}
 		}
 
@@ -105,7 +128,8 @@ PlayerSchedule* getPlayerScheduleByid(const char* id)
 
 	return NULL;
 }
-unsigned int calElapseFromTwoTimestr(const char* t1, const char* t2)
+//返回值为分钟
+unsigned int calElapseFromTwoDatetimeString(const char* t1, const char* t2)
 {
 	time_t ti1,ti2;
 	struct tm time1;
@@ -117,6 +141,18 @@ unsigned int calElapseFromTwoTimestr(const char* t1, const char* t2)
 
 	return (ti2 - ti1)/60;
 }
+unsigned int calElapseFromTwoTimeString(const char* t1, const char* t2)
+{
+	char temp1[128];
+	char temp2[128];
+	memset(temp1, 0, 128);
+	memset(temp2, 0, 128);
+	strcpy(temp1, "1990-11-11 ");
+	strcpy(temp2, "1990-11-11 ");
+	strcat(temp1, t1);
+	strcat(temp2, t2);
+	return calElapseFromTwoDatetimeString(temp1, temp2);
+}
 void getCurrentActionAndElapse(PlayerSchedule* ps, int* act, unsigned int* elapse)
 {
 	int i;
@@ -125,9 +161,10 @@ void getCurrentActionAndElapse(PlayerSchedule* ps, int* act, unsigned int* elaps
 	time_t now;
 	time(&now);
 	strtime = localtime(&now);
-	strftime(fmttime, sizeof(fmttime), "%Y-%m-%d %H:%M:%S", strtime);
+	//strftime(fmttime, sizeof(fmttime), "%Y-%m-%d %H:%M:%S", strtime);
+	strftime(fmttime, sizeof(fmttime), "%H:%M:%S", strtime);
 
-	for (i = 0; i < ps->act_num; i++)
+	for (i = ps->act_num - 1; i >= 0; i--)
 	{
 		int res = strcmp(fmttime, ps->act_time[i]);
 		if (res >= 0)
@@ -136,7 +173,9 @@ void getCurrentActionAndElapse(PlayerSchedule* ps, int* act, unsigned int* elaps
 			*act = ps->actid[i];
 
 			//计算当前事件已经持续的时间
-			*elapse = calElapseFromTwoTimestr(ps->act_time[i], fmttime);
+			*elapse = calElapseFromTwoTimeString(ps->act_time[i], fmttime);
+
+			break;
 		}
 	}
 }

@@ -13,6 +13,7 @@ BOOL closeDB(void);
 int readUsrAndPwd(void);
 int db_readAllPlayer(void);
 int db_readPlayerSchedule(const char* id);
+int db_updatePlayerHistory(const char* id);
 
 
 
