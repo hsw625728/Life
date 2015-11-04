@@ -246,6 +246,8 @@ int db_readPlayerSchedule(const char* id)
 
 int db_updatePlayerHistory(const char* id)
 {
+	int aID;
+	char calTimeStr[64];
 	time_t updateTime;
 	struct tm updateTimeTM;
 	char updateTimeStr[64];
@@ -310,9 +312,11 @@ int db_updatePlayerHistory(const char* id)
 		strcpy(updateTimeStr, player->birthday);
 	}
 	
+	strcpy(calTimeStr, updateTimeStr);
 	strptime(updateTimeStr, "%Y-%m-%d %H:%M:%S", &updateTimeTM);
 	updateTime = mktime(&updateTimeTM);
 	strftime(updateTimeStr_T, sizeof(updateTimeStr_T), "%H:%M:%S", &updateTimeTM);
+	printf("now_str_T=(%s),updateTimeStr_T=(%s)\n", now_str_T, updateTimeStr_T);
 
 	mysql_free_result(res);
 
@@ -342,6 +346,7 @@ int db_updatePlayerHistory(const char* id)
 					temp1 = calElapseFromTwoTimeString(schedule->act_time[i], "23:59:59");
 					temp2 = calElapseFromTwoTimeString("00:00:00", schedule->act_time[0]);
 					ti = temp1 + temp2;
+					ti += 1.0f;
 				}
 
 				int j;
@@ -368,9 +373,9 @@ int db_updatePlayerHistory(const char* id)
 			}	
 		}
 		//累计不足整天的部分
-		int haf = strcmp(updateTimeStr_T, now_str_T);
-		//if (haf >= 0)
-		if (haf < 0)
+		int haf = strcmp(updateTimeStr_T, now_str_T); 
+		if (haf >= 0)
+		//if(0)
 		{
 			float up_i = 0.0f;
 			int aID = 0;
@@ -403,10 +408,22 @@ int db_updatePlayerHistory(const char* id)
 						if (schedule->actid[i] == update_his[j].aID)
 						{
 							update_his[j].total_time += ti;	
-							strcpy(update_his[j].update_time, now_str_T);
+							strcpy(update_his[j].update_time, now_str);
 							break;
 						}
 					}
+					if (j == history_num)
+					{
+						//历史记录中不存在，添加到历史记录中。
+						strcpy(update_his[history_num].ID, id);
+						update_his[history_num].aID = schedule->actid[i];
+						update_his[history_num].total_time += ti;
+						strcpy(update_his[history_num].update_time, now_str);
+	
+						history_num++;
+						printf("1---->%d\n", history_num);
+					}
+					strcpy(calTimeStr, now_str);
 				}
 				else if (small >= 0)
 				{
@@ -440,10 +457,23 @@ int db_updatePlayerHistory(const char* id)
 						if (schedule->actid[i] == update_his[j].aID)
 						{
 							update_his[j].total_time += ti;
-							strcpy(update_his[j].update_time, now_str_T);
+							strcpy(update_his[j].update_time, now_str);
 							break;
 						}
 					}
+					if (j == history_num)
+					{
+						//历史记录中不存在，添加到历史记录中。
+						strcpy(update_his[history_num].ID, id);
+						update_his[history_num].aID = schedule->actid[i];
+						update_his[history_num].total_time += ti;
+						strcpy(update_his[history_num].update_time, now_str);
+	
+						history_num++;
+						printf("2---->%d\n", history_num);
+					}
+					strcpy(calTimeStr, now_str);
+
 				}
 			}
 
@@ -454,35 +484,170 @@ int db_updatePlayerHistory(const char* id)
 				if (aID == update_his[j].aID)
 				{
 					update_his[j].total_time += up_i;
-					strcpy(update_his[j].update_time, now_str_T);
+					strcpy(update_his[j].update_time, now_str);
 					break;
 				}
 			}
+			
 			float down_now = 0.0f;
 			
 			if (strcmp(schedule->act_time[0], now_str_T)>0)
 			{
 				down_now = calElapseFromTwoTimeString("00:00:00", now_str_T);
-				aID = schedule->act_time[history_num - 1];
+				aID = schedule->actid[history_num - 1];
 			}
 			else
 			{
 				down_now = calElapseFromTwoTimeString("00:00:00", schedule->act_time[0]);
-				aID = schedule->act_time[history_num - 1];
+				aID = schedule->actid[history_num - 1];
 			}
 			for (j = 0; j < history_num; j++)
 			{
 				if (aID == update_his[j].aID)
 				{
 					update_his[j].total_time += down_now;
-					strcpy(update_his[j].update_time, now_str_T);
+					strcpy(update_his[j].update_time, now_str);
 					break;
 				}
 			}
+	
 		}
 		else
 		{
 			//超过一天计算中间
+			for (i = 0; i < schedule->act_num; i++)
+			{
+				int big = strcmp(now_str_T, schedule->act_time[i]);
+				int small = strcmp(schedule->act_time[i], updateTimeStr_T);
+				if (big >= 0 && small >= 0)
+				{	
+					float ti = 0.0f;
+					//计算update到第一个事件的剩余时间累计到上次事件中
+					if (i == 0)
+					{
+						ti = calElapseFromTwoTimeString(updateTimeStr_T, schedule->act_time[i]);
+						aID = schedule->actid[schedule->act_num - 1];
+						int j;
+						for (j = 0; j < history_num; j++)
+						{
+							if (aID == update_his[j].aID)
+							{
+								update_his[j].total_time += ti;
+								strcpy(update_his[j].update_time, now_str);
+								break;
+							}
+						}
+						if (j == history_num)
+						{
+							//历史记录中不存在，添加到历史记录中。
+							strcpy(update_his[history_num].ID, id);
+							update_his[history_num].aID = schedule->actid[i];
+							update_his[history_num].total_time += ti;
+							strcpy(update_his[history_num].update_time, now_str);
+	
+							history_num++;
+						printf("3---->%d\n", history_num);
+						}
+					}
+					else
+					{
+						if (strcmp(schedule->act_time[i-1], updateTimeStr_T)<0)
+						{
+							ti = calElapseFromTwoTimeString(updateTimeStr_T, schedule->act_time[i]);
+							aID = schedule->actid[i-1];
+
+							int j;
+							for (j = 0; j < history_num; j++)
+							{
+								if (aID == update_his[j].aID)
+								{
+									update_his[j].total_time += ti;
+									strcpy(update_his[j].update_time, now_str);
+									break;
+								}
+							}
+							if (j == history_num)
+							{
+								//历史记录中不存在，添加到历史记录中。
+								strcpy(update_his[history_num].ID, id);
+								update_his[history_num].aID = schedule->actid[i];
+								update_his[history_num].total_time += ti;
+								strcpy(update_his[history_num].update_time, now_str);
+	
+								history_num++;
+								
+						printf("4---->%d\n", history_num);
+							}
+						}
+					}
+
+					//计算事件到下次事件的时间
+					if (i >= schedule->act_num - 1)
+					{
+						float ti = 0.0f;
+						ti = calElapseFromTwoTimeString(schedule->act_time[i], now_str_T);
+						aID = schedule->actid[i];
+						int j;
+						for (j = 0; j < history_num; j++)
+						{
+							if (aID == update_his[j].aID)
+							{
+								update_his[j].total_time += ti;
+								strcpy(update_his[j].update_time, now_str);
+								break;
+							}
+						}
+						if (j == history_num)
+						{
+							//历史记录中不存在，添加到历史记录中。
+							strcpy(update_his[history_num].ID, id);
+							update_his[history_num].aID = schedule->actid[i];
+							update_his[history_num].total_time += ti;
+							strcpy(update_his[history_num].update_time, now_str);
+
+							history_num++;
+						printf("5---->%d\n", history_num);
+						}
+					}
+					else
+					{
+						float ti = 0.0f;
+						if (strcmp(schedule->act_time[i+1], now_str_T)<0)
+						{
+							ti = calElapseFromTwoTimeString(schedule->act_time[i], schedule->act_time[i+1]);
+							aID = schedule->actid[i];
+						}
+						else
+						{
+							ti = calElapseFromTwoTimeString(schedule->act_time[i], now_str_T);
+							aID = schedule->actid[i];
+						}
+						int j;
+						for (j = 0; j < history_num; j++)
+						{
+							if (aID == update_his[j].aID)
+							{
+								update_his[j].total_time += ti;
+								strcpy(update_his[j].update_time, now_str);
+								break;
+							}
+						}
+						if (j == history_num)
+						{
+							//历史记录中不存在，添加到历史记录中。
+							strcpy(update_his[history_num].ID, id);
+							update_his[history_num].aID = schedule->actid[i];
+							update_his[history_num].total_time += ti;
+							strcpy(update_his[history_num].update_time, now_str);
+
+							history_num++;
+						printf("6---->%d\n", history_num);
+						}
+					}
+
+					strcpy(calTimeStr, now_str);
+				}
+			}
 		}
 	}
 
@@ -491,7 +656,7 @@ int db_updatePlayerHistory(const char* id)
 	{
 		char string[1024];
 		memset(string, 0, 1024);
-		sprintf(string , "REPLACE INTO player_history VALUES('%s',%d,%f,'%s')", update_his[i].ID, update_his[i].aID, update_his[i].total_time, update_his[i].update_time);
+		sprintf(string , "REPLACE INTO player_history VALUES('%s',%d,%f,'%s')", update_his[i].ID, update_his[i].aID, update_his[i].total_time, calTimeStr);
 		sendQuery(string);
 		printf(string);
 		printf("\n");
@@ -505,6 +670,48 @@ int db_updatePlayerHistory(const char* id)
 		free(update_his);
 }
 
+int db_updateDominoTilemap(char* usr, int index, const unsigned char* tilemap)
+{
+	char string[66*1024];
+	memset(string, 0, 66*1024);
+	sprintf(string, "REPLACE INTO domino_tilemap VALUES('%s',%d,'%s')", usr, index, tilemap);
+	BOOL ret = sendQuery(string);
+	if (ret)
+	{
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+int db_readDominoTilemap(char* usr, int index, unsigned char* tilemap)
+{
+	MYSQL_RES* res;
+	MYSQL_ROW row;
+	BOOL cc;
+	char string[256];
+	memset(string, 0, 256);
+	cc = sendQuery("SELECT * FROM domino_tilemap WHERE ID=%s AND tileid=%d", usr, index);
+	if (!cc)
+		return -1;
+	res = mysql_store_result(gpMysql);
+	if (!res)
+	{
+		sprintf(string, "Mysql read DominoTilemap error!\n");
+		LogWrite(LT_SYSTEM, string);
+		return -2;
+	}
+	int rec = mysql_num_rows(res);
+	if (rec > 0)
+	{
+		row = mysql_fetch_row(res);
+		strcpy(tilemap, row[eDOMINO_TILEMAP_TILEMAP]);
+		return 0;
+	}
+	return -3;
+}
 
 
 

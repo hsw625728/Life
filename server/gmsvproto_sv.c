@@ -5,8 +5,6 @@
 extern struct event_base* base;
 extern AllPlayer* allPlayer;
 
-void processLogin(struct sock_ev* ev);
-
 void release_sock_event(struct sock_ev* ev)
 {
 	event_del(ev->read_ev);
@@ -33,6 +31,12 @@ void on_write(int sock, short event, void* arg)
 			break;
 		case MSG_CS_GET_SCHEDULE:
 			processGetSchedule(ev);
+			break;
+		case MSG_CS_DOMINO_UPLOAD_TILEMAP:
+			processDominoUploadTilemap(ev);
+			break;
+		case MSG_CS_DOMINO_DOWNLOAD_TILEMAP:
+			processDominoDownloadTilemap(ev);
 			break;
 	}
 	//释放通信NetPacket以及内部buffer空间
@@ -185,4 +189,64 @@ void processGetSchedule(struct sock_ev* ev)
 	{
 		printf("gmsvproto_sv.c:processGetSchedule()  send err!\n");
 	}
+}
+void processDominoUploadTilemap(struct sock_ev* ev)
+{
+	char usr[64];
+	memset(usr, 0, 64);
+	int tileid;
+	int tilelength;
+	NET_PACKET_POP_STRING(ev->packet, usr, 64);
+	NET_PACKET_POP_INT32(ev->packet, tileid);
+	NET_PACKET_POP_INT32(ev->packet, tilelength);
+	unsigned char* tilemap = malloc(sizeof(unsigned char)*(tilelength+1));
+	memset(tilemap, 0, tilelength+1);
+	NET_PACKET_POP_BUFFER(ev->packet, tilemap, tilelength);
+	int ret = db_updateDominoTilemap(usr, tileid, tilemap);
+	NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
+	NET_PACKET_PUSH_UINT16(packet, MSG_SC_DOMINO_UPLOAD_TILEMAP_RES);
+	NET_PACKET_PUSH_UINT16(packet, 0);
+	if (ret == 0)
+	{
+		//update success
+		NET_PACKET_PUSH_INT16(packet, 0);
+	}
+	else
+	{
+		//update failed
+		NET_PACKET_PUSH_INT16(packet, -1);
+	}
+	NET_PACKET_UPDATE_LENGTH(packet);
+	int re = send(ev->sockid, packet->m_buffer, packet->m_writePos, 0);
+	NET_PACKET_END(packet);
+	free(tilemap);
+}
+void processDominoDownloadTilemap(struct sock_ev* ev)
+{
+	char usr[64];
+	memset(usr, 0, 64);
+	unsigned char tilemap[256*256];
+	memset(tilemap, 0, 256*256);
+	int tileid;
+	NET_PACKET_POP_STRING(ev->packet, usr, 64);
+	NET_PACKET_POP_INT32(ev->packet, tileid);
+	int ret = db_readDominoTilemap(usr, tileid, tilemap);
+
+	NET_PACKET_BEGIN(packet, DEFAULT_SIZE);
+	NET_PACKET_PUSH_UINT16(packet, MSG_SC_DOMINO_DOWNLOAD_TILEMAP_RES);
+	NET_PACKET_PUSH_UINT16(packet, 0);
+	if (ret == 0)
+	{
+		//sql success
+		NET_PACKET_PUSH_UINT16(packet, 0);
+		NET_PACKET_PUSH_STRING(packet, tilemap);
+	}
+	else
+	{
+		//sql failed
+		NET_PACKET_PUSH_UINT16(packet, -1);
+	}
+	NET_PACKET_UPDATE_LENGTH(packet);
+	int re = send(ev->sockid, packet->m_buffer, packet->m_writePos, 0);
+	NET_PACKET_END(packet);
 }

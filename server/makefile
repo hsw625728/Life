@@ -1,11 +1,11 @@
-gmsv : main.o init.o log.o resource.o dbsv_proto.o db.o dbsvproto_cli.o util.o net.o account.o gmsv_proto.o gmsvproto_sv.o account_cli.o account_dbsv.o net_packet.o all_player.o timer_life.o
-	gcc -o gmsv -g  main.o init.o log.o resource.o dbsv_proto.o db.o dbsvproto_cli.o util.o gmsv_proto.o gmsvproto_sv.o account.o account_cli.o account_dbsv.o -L/usr/lib64/mysql -lmysqlclient net.o -levent net_packet.o -lpthread all_player.o timer_life.o
+gmsv : main.o init.o log.o resource.o dbsv_proto.o all_player.o db.o dbsvproto_cli.o util.o net.o account.o gmsv_proto.o gmsvproto_sv.o account_cli.o account_dbsv.o net_packet.o timer_life.o
+	gcc -o gmsv -g  main.o init.o log.o resource.o dbsv_proto.o all_player.o db.o dbsvproto_cli.o util.o gmsv_proto.o gmsvproto_sv.o account.o account_cli.o account_dbsv.o -L/usr/lib64/mysql -lmysqlclient net.o -levent net_packet.o -lpthread timer_life.o
 main.o : main.c system.h type.h
 	gcc -c main.c -g
 net_packet.o : net_packet.c
 	gcc -c net_packet.c net_packet.h -g
-db.o : db.c system.h type.h /usr/include/mysql/mysql.h
-	gcc -c db.c /usr/include/mysql/mysql.h -g
+db.o : db.c system.h type.h /usr/include/mysql/mysql.h all_player.h
+	gcc -c db.c /usr/include/mysql/mysql.h all_player.h -g
 init.o : init.c init.h util.h system.h type.h
 	gcc -c init.c -g
 log.o : log.c log.h system.h type.h

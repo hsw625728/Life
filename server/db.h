@@ -14,6 +14,8 @@ int readUsrAndPwd(void);
 int db_readAllPlayer(void);
 int db_readPlayerSchedule(const char* id);
 int db_updatePlayerHistory(const char* id);
+int db_updateDominoTilemap(char* usr, int index, const unsigned char* tilemap);
+int db_readDominoTilemap(char* usr, int index, unsigned char* tilemap);
 
 
 

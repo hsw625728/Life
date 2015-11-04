@@ -113,3 +113,8 @@ void netpackGetOpcode(struct NetPacket* packet, unsigned short* op)
 	NET_PACKET_POP_UINT16(packet, length);
 	packet->m_writePos = length;
 }
+
+void netpacketUpdatePacketLength(struct NetPacket* packet)
+{
+	*(uint16_t*)&(packet->m_buffer[sizeof(packet->opcode)]) = packet->m_writePos;
+}

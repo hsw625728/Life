@@ -65,6 +65,7 @@ void netpackReserve(struct NetPacket* packet, size_t bufferSize);
 #define NET_PACKET_POP_FLOAT(packet, re) re = netpacketReadfloat(packet)
 #define NET_PACKET_POP_DOUBLE(packet, re) re = netpacketReaddouble(packet)
 #define NET_PACKET_POP_STRING(a,b,c) netpackReadString(a, b, c)
+#define NET_PACKET_POP_BUFFER(a,b,c) netpackReadbuff(a, b, c)
 
 
 
@@ -79,6 +80,8 @@ void netpackReserve(struct NetPacket* packet, size_t bufferSize);
 #define NET_PACKET_PUSH_FLOAT(packet, data) netpacketWritefloat(packet, data)
 #define NET_PACKET_PUSH_DOUBLE(packet, data) netpacketWritedouble(packet, data)
 #define NET_PACKET_PUSH_STRING(a,b) netpackWriteString(a,b)
+#define NET_PACKET_PUSH_BUFFER(a,b) netpackWriteBuff(a,b)
+#define NET_PACKET_UPDATE_LENGTH(packet) netpacketUpdatePacketLength(packet)
 
 
 void netpackSetOpcode(struct NetPacket* packet, unsigned short opcode);
@@ -100,4 +103,5 @@ BOOL netpackWriteString(struct NetPacket* packet, const unsigned char* str);
 void netpackRelease(struct NetPacket* packet);
 
 void netpackGetOpcode(struct NetPacket* packet, unsigned short* op);
+void netpacketUpdatePacketLength(struct NetPacket* packet);
 #endif
