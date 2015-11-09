@@ -77,8 +77,8 @@ void netpackWriteBuff(struct NetPacket* packet, const unsigned char* buffer, siz
 
 BOOL netpackReadString(struct NetPacket* packet, unsigned char* buff, size_t bufflen)
 {
-	uint8_t len;
-	len = netpacketReaduint8_t(packet);
+	size_t len;
+	len = netpacketReaduint32_t(packet);
 	if (len == 0)
 		return TRUE;
 	else if(len > bufflen)
@@ -93,8 +93,8 @@ BOOL netpackReadString(struct NetPacket* packet, unsigned char* buff, size_t buf
 
 BOOL netpackWriteString(struct NetPacket* packet, const unsigned char* str) 
 {
-	uint8_t len = strlen(str);
-	netpacketWriteuint8_t(packet, len);
+	size_t len = strlen(str);
+	netpacketWriteuint32_t(packet, len);
 	if (len > 0)
 		netpackWriteBuff(packet, str, len);	
 }

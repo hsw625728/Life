@@ -76,7 +76,7 @@ void updateAllPlayer(int signo)
 	if (signo == SIGALRM)
 	{
 		int i = 0;
-		printf ("Receive SIGALRM\n");
+		//printf ("Receive SIGALRM\n");
 		for (; i < allPlayerNum; i++)
 		{
 			if (allPlayer[i].sockid != 0)
